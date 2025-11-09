@@ -52,30 +52,27 @@ class Bidirectional_Dijkstra:
             return (0, [start_fri])
 
         # using list to memorize both directions' info
+        seen = [set(), set()]
         dists = [{start_fri: 0}, {target_fri: 0}]  # total distances from start and target node
         paths = [{start_fri: [start_fri]}, {target_fri: [target_fri]}]  # minimum weight paths to start and target node
-        node_heap = [[(0, start_fri)], [(0, target_fri)]]  # heap of (distance, node) for choosing next node to expand
+        node_heap = [(0, start_fri, 0), (0, target_fri, 1)]  # heap of (distance, node, dir) for choosing next node to expand
 
         min_dist = inf
         min_path = []
-        direct = 1
-        while node_heap[0] and node_heap[1]:
-            # choose direction
-            # dir == 0 is forward direction and dir == 1 is back
-            direct = self.other_dir(direct)
+        while node_heap:
             # get minimum distance to expand
-            now_dist, now_fri = heappop(node_heap[direct])
+            now_dist, now_fri, direct = heappop(node_heap)
             if now_dist > dists[direct][now_fri]:
                 # Shortest path to now_fri has already been found
                 continue
-            if now_fri in dists[self.other_dir(direct)]:
+            if now_fri in seen[self.other_dir(direct)]:
                 break
-
+            seen[direct].add(now_fri)
             for new_fri, new_weight in self.adj_matrix[now_fri].items():
                 new_dist = now_dist + new_weight
                 if new_dist < dists[direct].get(new_fri, inf):
                     dists[direct][new_fri] = new_dist
-                    heappush(node_heap[direct], (new_dist, new_fri))
+                    heappush(node_heap, (new_dist, new_fri, direct))
                     paths[direct][new_fri] = paths[direct][now_fri] + [new_fri]
                     if new_fri in dists[0] and new_fri in dists[1]: # if new_fri connects both sets
                         # check whether this path is better
@@ -106,3 +103,6 @@ class Bidirectional_Dijkstra:
                     min_path[nei_node] = new_path
                     heappush(heap, (new_path, nei_node))
         return min_path[target]
+
+if __name__ == "__main__":
+    pass

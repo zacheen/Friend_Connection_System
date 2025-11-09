@@ -43,5 +43,9 @@ class Backend:
             if ret[0] != None :
                 raise Exception
         elif ret[0] != check :
+            print(check, ret)
             raise Exception
         return ret
+
+if __name__ == "__main__":
+    pass
