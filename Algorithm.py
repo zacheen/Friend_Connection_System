@@ -58,29 +58,25 @@ class Bidirectional_Dijkstra:
 
         min_dist = inf
         min_path = []
-        dir = 1
+        direct = 1
         while node_heap[0] and node_heap[1]:
             # choose direction
             # dir == 0 is forward direction and dir == 1 is back
-            dir = self.other_dir(dir)
+            direct = self.other_dir(direct)
             # get minimum distance to expand
-            now_dist, now_fri = heappop(node_heap[dir])
-            if now_dist > dists[dir][now_fri]:
+            now_dist, now_fri = heappop(node_heap[direct])
+            if now_dist > dists[direct][now_fri]:
                 # Shortest path to now_fri has already been found
                 continue
-            # update distance
-            dists[dir][now_fri] = now_dist  # equal to seen[dir][v]
-            if now_fri in dists[self.other_dir(dir)]:
-                # if we have scanned v in both directions we are done
-                # we have now discovered the shortest path
-                return (min_dist, min_path)
+            if now_fri in dists[self.other_dir(direct)]:
+                break
 
             for new_fri, new_weight in self.adj_matrix[now_fri].items():
                 new_dist = now_dist + new_weight
-                if new_fri not in dists[dir] or new_dist < dists[dir][new_fri]:
-                    dists[dir][new_fri] = new_dist
-                    heappush(node_heap[dir], (new_dist, new_fri))
-                    paths[dir][new_fri] = paths[dir][now_fri] + [new_fri]
+                if new_dist < dists[direct].get(new_fri, inf):
+                    dists[direct][new_fri] = new_dist
+                    heappush(node_heap[direct], (new_dist, new_fri))
+                    paths[direct][new_fri] = paths[direct][now_fri] + [new_fri]
                     if new_fri in dists[0] and new_fri in dists[1]: # if new_fri connects both sets
                         # check whether this path is better
                         totaldist = dists[0][new_fri] + dists[1][new_fri]
@@ -88,4 +84,6 @@ class Bidirectional_Dijkstra:
                             min_dist = totaldist
                             min_path = paths[0][new_fri][:-1] + paths[1][new_fri][::-1]
                             # since paths[0][new_fri][-1] == paths[1][new_fri][-1]
-        return (None, None)
+        if min_dist == inf:
+            return (None, None)
+        return (min_dist, min_path)
