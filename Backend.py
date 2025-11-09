@@ -37,4 +37,11 @@ class Backend:
     def get_best_path(self, fri1, fri2):
         if not self.check_relation(fri1, fri2) :
             return (None, None)
-        return self.graph.find_min_path(fri1, fri2)
+        ret = self.graph.find_min_path(fri1, fri2)
+        check = self.graph.Dijkstra(fri1, fri2)
+        if check == inf :
+            if ret[0] != None :
+                raise Exception
+        elif ret[0] != check :
+            raise Exception
+        return ret
