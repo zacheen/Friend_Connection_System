@@ -524,14 +524,21 @@ HTML_TEMPLATE = '''
             d3.selectAll('.node')
                 .classed('path-node-highlighted', d => path.includes(d.id));
             
-            // Highlight path edges
+            // Create a set of edge pairs in the path
+            const pathEdges = new Set();
             for (let i = 0; i < path.length - 1; i++) {
-                d3.selectAll('.link')
-                    .classed('highlighted', d => {
-                        return (d.source.id === path[i] && d.target.id === path[i + 1]) ||
-                               (d.source.id === path[i + 1] && d.target.id === path[i]);
-                    });
+                // Store edges in both directions for easier lookup
+                pathEdges.add(`${path[i]}-${path[i + 1]}`);
+                pathEdges.add(`${path[i + 1]}-${path[i]}`);
             }
+            
+            // Highlight all path edges at once
+            d3.selectAll('.link')
+                .classed('highlighted', d => {
+                    const edgeKey1 = `${d.source.id}-${d.target.id}`;
+                    const edgeKey2 = `${d.target.id}-${d.source.id}`;
+                    return pathEdges.has(edgeKey1) || pathEdges.has(edgeKey2);
+                });
         }
         
         // Add new connection
