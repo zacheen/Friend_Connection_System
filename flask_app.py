@@ -245,7 +245,7 @@ HTML_TEMPLATE = '''
         }
         
         .node-label {
-            font-size: 12px;
+            font-size: 11px;
             pointer-events: none;
             text-anchor: middle;
             fill: #333;
@@ -253,17 +253,23 @@ HTML_TEMPLATE = '''
         }
         
         .link-label {
-            font-size: 11px;
+            font-size: 9px;
             fill: #333;
             text-anchor: middle;
             pointer-events: none;
             opacity: 1;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, font-size 0.3s;
             font-weight: 600;
             stroke: white;
-            stroke-width: 4px;
+            stroke-width: 3px;
             stroke-linejoin: round;
             paint-order: stroke fill;
+        }
+        
+        .link-label.path-label-highlighted {
+            font-size: 11px;
+            fill: #ff6b6b;
+            font-weight: 800;
         }
         
         .hide-labels .link-label {
@@ -278,7 +284,7 @@ HTML_TEMPLATE = '''
         
         .path-node-highlighted {
             fill: #ff6b6b !important;
-            r: 12 !important;
+            r: 10 !important;
         }
         
         svg {
@@ -376,10 +382,12 @@ HTML_TEMPLATE = '''
             
             // Initialize force simulation
             simulation = d3.forceSimulation()
-                .force('link', d3.forceLink().id(d => d.id).distance(d => Math.max(50, d.weight * 3)))
-                .force('charge', d3.forceManyBody().strength(-400))
+                .force('link', d3.forceLink().id(d => d.id).distance(d => Math.min(30, d.weight * 1.5)))
+                .force('charge', d3.forceManyBody().strength(-200))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(40));
+                .force('collision', d3.forceCollide().radius(25))
+                .force('x', d3.forceX(width / 2).strength(0.05))
+                .force('y', d3.forceY(height / 2).strength(0.05));
         }
         
         // Update graph visualization
@@ -413,7 +421,7 @@ HTML_TEMPLATE = '''
                 .data(graphData.nodes)
                 .enter().append('circle')
                 .attr('class', 'node')
-                .attr('r', 8)
+                .attr('r', 7)
                 .attr('fill', '#667eea')
                 .call(drag(simulation));
             
@@ -423,7 +431,7 @@ HTML_TEMPLATE = '''
                 .enter().append('text')
                 .attr('class', 'node-label')
                 .text(d => d.label)
-                .attr('dy', -15);
+                .attr('dy', -12);
             
             // Update positions on tick
             simulation
@@ -440,8 +448,8 @@ HTML_TEMPLATE = '''
                         const dx = d.target.x - d.source.x;
                         const dy = d.target.y - d.source.y;
                         const length = Math.sqrt(dx * dx + dy * dy);
-                        const offsetX = (dy / length) * 10;  // Perpendicular offset
-                        const offsetY = -(dx / length) * 10;
+                        const offsetX = (dy / length) * 8;  // Smaller perpendicular offset
+                        const offsetY = -(dx / length) * 8;
                         
                         d3.select(this)
                             .attr('x', (d.source.x + d.target.x) / 2 + offsetX)
@@ -459,7 +467,7 @@ HTML_TEMPLATE = '''
             
             simulation.force('link')
                 .links(graphData.edges)
-                .distance(d => Math.max(50, d.weight * 3));  // Minimum distance to prevent overlap
+                .distance(d => Math.min(30, d.weight * 1.5));  // Closer nodes
             
             simulation.alpha(1).restart();
             
@@ -550,11 +558,12 @@ HTML_TEMPLATE = '''
         // Highlight path on graph
         function highlightPath(path) {
             // Reset all highlights
-            d3.selectAll('.link').classed('highlighted', false);
-            d3.selectAll('.node').classed('path-node-highlighted', false);
+            g.selectAll('.link').classed('highlighted', false);
+            g.selectAll('.node').classed('path-node-highlighted', false);
+            g.selectAll('.link-label').classed('path-label-highlighted', false);
             
             // Highlight path nodes
-            d3.selectAll('.node')
+            g.selectAll('.node')
                 .classed('path-node-highlighted', d => path.includes(d.id));
             
             // Create a set of edge pairs in the path
@@ -565,12 +574,21 @@ HTML_TEMPLATE = '''
                 pathEdges.add(`${path[i + 1]}-${path[i]}`);
             }
             
-            // Highlight all path edges at once
-            d3.selectAll('.link')
+            // Highlight all path edges and their labels
+            g.selectAll('.link')
                 .classed('highlighted', d => {
                     const edgeKey1 = `${d.source.id}-${d.target.id}`;
                     const edgeKey2 = `${d.target.id}-${d.source.id}`;
-                    return pathEdges.has(edgeKey1) || pathEdges.has(edgeKey2);
+                    const isInPath = pathEdges.has(edgeKey1) || pathEdges.has(edgeKey2);
+                    
+                    // Also highlight the labels for path edges
+                    if (isInPath) {
+                        g.selectAll('.link-label')
+                            .filter(labelData => labelData === d)
+                            .classed('path-label-highlighted', true);
+                    }
+                    
+                    return isInPath;
                 });
         }
         
@@ -656,6 +674,8 @@ HTML_TEMPLATE = '''
             
             svg.attr('width', width).attr('height', height);
             simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.force('x', d3.forceX(width / 2).strength(0.05));
+            simulation.force('y', d3.forceY(height / 2).strength(0.05));
             simulation.alpha(0.3).restart();
         });
     </script>
