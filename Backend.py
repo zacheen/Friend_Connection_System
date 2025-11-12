@@ -7,11 +7,11 @@ class Backend:
     
     def __init__(self, path):
         self.init_space()
-        with open(path, "r") as fr :
-            while fr :
+        with open(path, "r") as fr:
+            while fr:
                 # deal with data
                 input_line = fr.readline()
-                if input_line == "-\n" :
+                if input_line == "-\n":
                     continue
                 if input_line == "\n" or input_line == "":
                     break
@@ -46,6 +46,46 @@ class Backend:
             print(check, ret)
             raise Exception
         return ret
+    
+    def get_all_nodes(self):
+        """Get all unique nodes in the graph"""
+        nodes = set()
+        for node in self.graph.adj_matrix.keys():
+            nodes.add(node)
+            for neighbor in self.graph.adj_matrix[node].keys():
+                nodes.add(neighbor)
+        return list(nodes)
+    
+    def get_all_edges(self):
+        """Get all edges with their weights"""
+        edges = []
+        seen = set()
+        for node1 in self.graph.adj_matrix:
+            for node2, weight in self.graph.adj_matrix[node1].items():
+                edge_tuple = tuple(sorted([node1, node2]))
+                if edge_tuple not in seen:
+                    seen.add(edge_tuple)
+                    edges.append({
+                        'source': node1,
+                        'target': node2,
+                        'weight': weight
+                    })
+        return edges
+    
+    def get_graph_data(self):
+        """Get complete graph data for visualization"""
+        return {
+            'nodes': [{'id': node, 'label': node} for node in self.get_all_nodes()],
+            'edges': self.get_all_edges()
+        }
+    
+    def get_connected_components(self):
+        """Get all connected components in the graph"""
+        components = defaultdict(set)
+        for node in self.get_all_nodes():
+            root = self.uf.find(node)
+            components[root].add(node)
+        return [list(component) for component in components.values()]
 
 if __name__ == "__main__":
     pass

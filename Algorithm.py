@@ -29,6 +29,7 @@ class UF_by_size:
 from heapq import heappush, heappop
 from math import inf
 # defaultdict version, so that we can add in any amount and any type of item
+    # checked with "https://leetcode.com/problems/path-with-maximum-probability/description/"
 class Bidirectional_Dijkstra:
     def __init__(self):
         self.adj_matrix = defaultdict(lambda : defaultdict(lambda : inf))
