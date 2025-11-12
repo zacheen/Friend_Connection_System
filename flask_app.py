@@ -366,7 +366,67 @@ HTML_TEMPLATE = '''
         let simulation;
         let svg;
         let g;
-        
+        const nameInputIds = ['person1', 'person2', 'friend1', 'friend2'];
+        let activeNameInput = null;
+
+        function setupInputFocusTracking() {
+            nameInputIds.forEach(id => {
+                const input = document.getElementById(id);
+                if (!input) return;
+
+                input.addEventListener('focus', () => {
+                    activeNameInput = input;
+                });
+            });
+        }
+
+        function getTrackedInputs() {
+            return nameInputIds
+                .map(id => document.getElementById(id))
+                .filter(input => input instanceof HTMLInputElement);
+        }
+
+        function handleNodeClick(nodeData) {
+            const inputs = getTrackedInputs();
+            if (!inputs.length) {
+                return;
+            }
+
+            const name = nodeData?.id ?? nodeData?.label;
+            if (!name) {
+                return;
+            }
+
+            let targetInput = null;
+
+            if (activeNameInput && inputs.includes(activeNameInput)) {
+                targetInput = activeNameInput;
+            } else if (inputs.includes(document.activeElement)) {
+                targetInput = document.activeElement;
+            }
+
+            if (!targetInput) {
+                targetInput = inputs.find(input => !input.value) || inputs[0];
+            }
+
+            if (targetInput) {
+                targetInput.value = name;
+                let nextInput = null;
+                const currentIndex = inputs.indexOf(targetInput);
+                if (currentIndex !== -1) {
+                    nextInput = inputs.slice(currentIndex + 1).find(Boolean) || null;
+                }
+
+                if (nextInput) {
+                    nextInput.focus();
+                    activeNameInput = nextInput;
+                } else {
+                    targetInput.focus();
+                    activeNameInput = targetInput;
+                }
+            }
+        }
+
         // Initialize the graph
         function initGraph() {
             const container = document.getElementById('graphContainer');
@@ -431,15 +491,17 @@ HTML_TEMPLATE = '''
                 .attr('class', 'node')
                 .attr('r', 7)
                 .attr('fill', '#667eea')
-                .call(drag(simulation));
-            
+                .call(drag(simulation))
+                .on('click', (event, d) => handleNodeClick(d));
+
             // Add node labels
             const nodeLabel = nodeLabelGroup.selectAll('text')
                 .data(graphData.nodes)
                 .enter().append('text')
                 .attr('class', 'node-label')
                 .text(d => d.label)
-                .attr('dy', -12);
+                .attr('dy', -12)
+                .on('click', (event, d) => handleNodeClick(d));
             
             // Update positions on tick
             simulation
@@ -683,6 +745,7 @@ HTML_TEMPLATE = '''
         // Initialize on load
         window.addEventListener('load', () => {
             initGraph();
+            setupInputFocusTracking();
             loadGraph();
         });
         
