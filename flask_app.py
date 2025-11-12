@@ -411,8 +411,19 @@ HTML_TEMPLATE = '''
 
             if (targetInput) {
                 targetInput.value = name;
-                targetInput.focus();
-                activeNameInput = targetInput;
+                let nextInput = null;
+                const currentIndex = inputs.indexOf(targetInput);
+                if (currentIndex !== -1) {
+                    nextInput = inputs.slice(currentIndex + 1).find(Boolean) || null;
+                }
+
+                if (nextInput) {
+                    nextInput.focus();
+                    activeNameInput = nextInput;
+                } else {
+                    targetInput.focus();
+                    activeNameInput = targetInput;
+                }
             }
         }
 
