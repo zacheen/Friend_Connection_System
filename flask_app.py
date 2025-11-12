@@ -112,6 +112,13 @@ HTML_TEMPLATE = '''
             border-color: #764ba2;
         }
         
+        small {
+            color: #666;
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
         button {
             width: 100%;
             padding: 12px;
@@ -323,8 +330,9 @@ HTML_TEMPLATE = '''
                         <input type="text" id="friend2" placeholder="Enter name">
                     </div>
                     <div class="input-group">
-                        <label for="score">Connection Score:</label>
-                        <input type="number" id="score" placeholder="1-100" min="1" max="100">
+                        <label for="score">Connection Score (1=closest, 10=distant):</label>
+                        <input type="number" id="score" placeholder="1-10" min="1" max="10" step="1">
+                        <small>Lower scores = stronger friendships</small>
                     </div>
                     <button onclick="addConnection()">Add Connection</button>
                     <div id="addResult"></div>
@@ -382,7 +390,7 @@ HTML_TEMPLATE = '''
             
             // Initialize force simulation
             simulation = d3.forceSimulation()
-                .force('link', d3.forceLink().id(d => d.id).distance(d => Math.min(30, d.weight * 1.5)))
+                .force('link', d3.forceLink().id(d => d.id).distance(d => 20 + d.weight * 5))
                 .force('charge', d3.forceManyBody().strength(-200))
                 .force('center', d3.forceCenter(width / 2, height / 2))
                 .force('collision', d3.forceCollide().radius(25))
@@ -467,7 +475,7 @@ HTML_TEMPLATE = '''
             
             simulation.force('link')
                 .links(graphData.edges)
-                .distance(d => Math.min(30, d.weight * 1.5));  // Closer nodes
+                .distance(d => 20 + d.weight * 5);  // Distance scales with score
             
             simulation.alpha(1).restart();
             
@@ -604,6 +612,18 @@ HTML_TEMPLATE = '''
                 return;
             }
             
+            if (score < 1 || score > 10) {
+                document.getElementById('addResult').innerHTML = 
+                    '<div class="error-msg">Score must be between 1 and 10</div>';
+                return;
+            }
+            
+            if (friend1 === friend2) {
+                document.getElementById('addResult').innerHTML = 
+                    '<div class="error-msg">Cannot connect a person to themselves</div>';
+                return;
+            }
+            
             try {
                 const response = await fetch('/api/add_relation', {
                     method: 'POST',
@@ -729,8 +749,11 @@ def add_relation():
     
     try:
         score = int(score)
-        if score <= 0:
-            return jsonify({'success': False, 'message': 'Score must be positive'})
+        if score < 1 or score > 10:
+            return jsonify({'success': False, 'message': 'Score must be between 1 and 10'})
+        
+        if friend1 == friend2:
+            return jsonify({'success': False, 'message': 'Cannot connect a person to themselves'})
         
         backend.add_relation(friend1, friend2, score)
         return jsonify({'success': True, 'message': 'Relationship added successfully'})
