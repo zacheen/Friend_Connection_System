@@ -253,9 +253,21 @@ HTML_TEMPLATE = '''
         }
         
         .link-label {
-            font-size: 10px;
-            fill: #666;
+            font-size: 11px;
+            fill: #333;
             text-anchor: middle;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.3s;
+            font-weight: 600;
+            stroke: white;
+            stroke-width: 4px;
+            stroke-linejoin: round;
+            paint-order: stroke fill;
+        }
+        
+        .hide-labels .link-label {
+            opacity: 0;
         }
         
         .highlighted {
@@ -324,6 +336,7 @@ HTML_TEMPLATE = '''
                             <div class="stat-label">Connections</div>
                         </div>
                     </div>
+                    <button onclick="toggleLabels()" style="margin-top: 10px;">👁️ Hide/Show Edge Labels</button>
                     <button onclick="refreshGraph()" style="margin-top: 10px;">🔄 Refresh Graph</button>
                 </div>
             </div>
@@ -363,10 +376,10 @@ HTML_TEMPLATE = '''
             
             // Initialize force simulation
             simulation = d3.forceSimulation()
-                .force('link', d3.forceLink().id(d => d.id).distance(d => d.weight * 2))
-                .force('charge', d3.forceManyBody().strength(-300))
+                .force('link', d3.forceLink().id(d => d.id).distance(d => Math.max(50, d.weight * 3)))
+                .force('charge', d3.forceManyBody().strength(-400))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(30));
+                .force('collision', d3.forceCollide().radius(40));
         }
         
         // Update graph visualization
@@ -374,26 +387,29 @@ HTML_TEMPLATE = '''
             // Clear previous elements
             g.selectAll('*').remove();
             
+            // Create a container for the graph elements with proper layering
+            const linkGroup = g.append('g').attr('class', 'link-group');
+            const labelGroup = g.append('g').attr('class', 'label-group');
+            const nodeGroup = g.append('g').attr('class', 'node-group');
+            const nodeLabelGroup = g.append('g').attr('class', 'node-label-group');
+            
             // Add links
-            const link = g.append('g')
-                .selectAll('line')
+            const link = linkGroup.selectAll('line')
                 .data(graphData.edges)
                 .enter().append('line')
                 .attr('class', 'link')
                 .attr('stroke', '#999')
                 .attr('stroke-width', 2);
             
-            // Add link labels
-            const linkLabel = g.append('g')
-                .selectAll('text')
+            // Add link labels with white background stroke - always visible
+            const linkLabel = labelGroup.selectAll('.link-label')
                 .data(graphData.edges)
                 .enter().append('text')
                 .attr('class', 'link-label')
                 .text(d => d.weight);
             
             // Add nodes
-            const node = g.append('g')
-                .selectAll('circle')
+            const node = nodeGroup.selectAll('circle')
                 .data(graphData.nodes)
                 .enter().append('circle')
                 .attr('class', 'node')
@@ -402,8 +418,7 @@ HTML_TEMPLATE = '''
                 .call(drag(simulation));
             
             // Add node labels
-            const nodeLabel = g.append('g')
-                .selectAll('text')
+            const nodeLabel = nodeLabelGroup.selectAll('text')
                 .data(graphData.nodes)
                 .enter().append('text')
                 .attr('class', 'node-label')
@@ -420,9 +435,18 @@ HTML_TEMPLATE = '''
                         .attr('x2', d => d.target.x)
                         .attr('y2', d => d.target.y);
                     
-                    linkLabel
-                        .attr('x', d => (d.source.x + d.target.x) / 2)
-                        .attr('y', d => (d.source.y + d.target.y) / 2);
+                    // Position labels with slight offset to avoid overlap with the line
+                    linkLabel.each(function(d) {
+                        const dx = d.target.x - d.source.x;
+                        const dy = d.target.y - d.source.y;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const offsetX = (dy / length) * 10;  // Perpendicular offset
+                        const offsetY = -(dx / length) * 10;
+                        
+                        d3.select(this)
+                            .attr('x', (d.source.x + d.target.x) / 2 + offsetX)
+                            .attr('y', (d.source.y + d.target.y) / 2 + offsetY);
+                    });
                     
                     node
                         .attr('cx', d => d.x)
@@ -433,12 +457,21 @@ HTML_TEMPLATE = '''
                         .attr('y', d => d.y);
                 });
             
-            simulation.force('link').links(graphData.edges);
+            simulation.force('link')
+                .links(graphData.edges)
+                .distance(d => Math.max(50, d.weight * 3));  // Minimum distance to prevent overlap
+            
             simulation.alpha(1).restart();
             
             // Update statistics
             document.getElementById('nodeCount').textContent = graphData.nodes.length;
             document.getElementById('edgeCount').textContent = graphData.edges.length;
+        }
+        
+        // Toggle label visibility
+        function toggleLabels() {
+            const container = document.getElementById('graphContainer');
+            container.classList.toggle('hide-labels');
         }
         
         // Drag behavior
