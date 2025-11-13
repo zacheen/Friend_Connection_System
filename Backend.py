@@ -26,6 +26,8 @@ class Backend:
     #         self.add_relation(fri1, fri2, score)
 
     def set_limitation(self, limit):
+        if limit == 0 :
+            self.graph.set_limitation(inf)
         self.graph.set_limitation(limit)
 
     def add_relation(self, fri1, fri2, connection_score):

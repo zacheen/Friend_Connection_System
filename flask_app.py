@@ -355,7 +355,7 @@ HTML_TEMPLATE = '''
                     
                     <div class="input-group" style="margin-top: 20px;">
                         <label for="pathLimit">Path Score Limit:</label>
-                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="30">
+                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="0">
                         <small>Maximum total score for a valid path (0 = unlimited)</small>
                     </div>
                     <button onclick="updateLimitation()">Update Limit</button>
@@ -459,9 +459,18 @@ HTML_TEMPLATE = '''
             if (targetInput) {
                 targetInput.value = name;
                 let nextInput = null;
-                const currentIndex = inputs.indexOf(targetInput);
-                if (currentIndex !== -1) {
-                    nextInput = inputs.slice(currentIndex + 1).find(Boolean) || null;
+                
+                // Determine next input based on cycling within pairs
+                const targetId = targetInput.id;
+                
+                if (targetId === 'person1') {
+                    nextInput = document.getElementById('person2');
+                } else if (targetId === 'person2') {
+                    nextInput = document.getElementById('person1');  // Cycle back to person1
+                } else if (targetId === 'friend1') {
+                    nextInput = document.getElementById('friend2');
+                } else if (targetId === 'friend2') {
+                    nextInput = document.getElementById('friend1');  // Cycle back to friend1
                 }
 
                 if (nextInput) {

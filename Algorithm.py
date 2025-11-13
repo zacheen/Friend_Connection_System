@@ -32,7 +32,7 @@ from math import inf
     # checked with "https://leetcode.com/problems/path-with-maximum-probability/description/"
 class Bidirectional_Dijkstra:
     def __init__(self):
-        self.weight_limitation = 30 # result weight should be less than this value
+        self.weight_limitation = inf # result weight should be less than this value
         self.adj_matrix = defaultdict(lambda : defaultdict(lambda : inf))
 
     def set_limitation(self, limit):
