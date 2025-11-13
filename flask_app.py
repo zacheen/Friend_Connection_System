@@ -697,12 +697,6 @@ HTML_TEMPLATE = '''
                     
                     html += '</div>';
                     html += `<div class="score-display">Total Score: ${result.score}</div>`;
-                    
-                    // Add warning if score is close to limit
-                    if (currentLimitation > 0 && currentLimitation !== Infinity && result.score > currentLimitation * 0.8) {
-                        html += `<div class="warning-msg">⚠️ Note: This path score (${result.score}) is close to the current limit of ${currentLimitation}</div>`;
-                    }
-                    
                     html += '</div>';
                     
                     document.getElementById('pathResult').innerHTML = html;
@@ -718,10 +712,6 @@ HTML_TEMPLATE = '''
                                 <strong>❌ No Connection Found</strong><br>
                                 ${result.message}
                             </div>
-                            <div class="warning-msg" style="margin-top: 10px;">
-                                💡 <strong>Tip:</strong> These people are not connected through any path. 
-                                You need to add connections to bridge their separate networks.
-                            </div>
                         `;
                     } else if (result.reason === 'exceeds_limit') {
                         // Connection exists but exceeds the weight limit
@@ -729,10 +719,6 @@ HTML_TEMPLATE = '''
                             <div class="warning-msg">
                                 <strong>⚠️ Path Exceeds Limit</strong><br>
                                 ${result.message}
-                            </div>
-                            <div class="success-msg" style="margin-top: 10px;">
-                                ✅ <strong>Good news:</strong> A connection exists!<br>
-                                Try increasing the path limit above ${currentLimitation} to find the shortest path.
                             </div>
                         `;
                     } else {
