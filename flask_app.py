@@ -7,8 +7,19 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialize backend
-# You can specify a data file path here, or leave it None for empty initialization
-backend = Backend(path='friendship_data.txt' if os.path.exists('friendship_data.txt') else None)
+# Handle different initialization scenarios
+try:
+    if os.path.exists('friendship_data.txt'):
+        backend = Backend(path='friendship_data.txt')
+    else:
+        # Create empty backend if no data file exists
+        backend = Backend.__new__(Backend)
+        backend.init_space()
+except Exception as e:
+    # Fallback to empty initialization if file reading fails
+    print(f"Warning: Could not load friendship_data.txt: {e}")
+    backend = Backend.__new__(Backend)
+    backend.init_space()
 
 # HTML template will be served from here
 HTML_TEMPLATE = '''
@@ -203,6 +214,15 @@ HTML_TEMPLATE = '''
             border: 1px solid #f5c6cb;
         }
         
+        .warning-msg {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid #ffeaa7;
+        }
+        
         .stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -227,6 +247,21 @@ HTML_TEMPLATE = '''
             color: #666;
             font-size: 0.9em;
             margin-top: 3px;
+        }
+        
+        .limitation-display {
+            background: #f0f4ff;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid #d0d8ff;
+            text-align: center;
+        }
+        
+        .limitation-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #667eea;
         }
         
         /* Graph styling */
@@ -306,7 +341,15 @@ HTML_TEMPLATE = '''
         <div class="main-content">
             <div class="controls">
                 <div class="section">
-                    <h2>📍 Find Shortest Path</h2>
+                    <h2>🔍 Find Shortest Path</h2>
+                    <div class="input-group">
+                        <label for="pathLimit">Path Score Limit:</label>
+                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="30">
+                        <small>Maximum total score for a valid path (0 = unlimited)</small>
+                    </div>
+                    <button onclick="updateLimitation()" style="margin-bottom: 15px;">Update Limit</button>
+                    <div id="limitResult"></div>
+                    
                     <div class="input-group">
                         <label for="person1">Person 1:</label>
                         <input type="text" id="person1" placeholder="Enter name">
@@ -350,6 +393,9 @@ HTML_TEMPLATE = '''
                             <div class="stat-label">Connections</div>
                         </div>
                     </div>
+                    <div class="limitation-display">
+                        <div class="limitation-value">Current Path Limit: <span id="currentLimit">30</span></div>
+                    </div>
                     <button onclick="toggleLabels()" style="margin-top: 10px;">👁️ Hide/Show Edge Labels</button>
                     <button onclick="refreshGraph()" style="margin-top: 10px;">🔄 Refresh Graph</button>
                 </div>
@@ -366,6 +412,7 @@ HTML_TEMPLATE = '''
         let simulation;
         let svg;
         let g;
+        let currentLimitation = 30;
         const nameInputIds = ['person1', 'person2', 'friend1', 'friend2'];
         let activeNameInput = null;
 
@@ -424,6 +471,45 @@ HTML_TEMPLATE = '''
                     targetInput.focus();
                     activeNameInput = targetInput;
                 }
+            }
+        }
+
+        // Update path limitation
+        async function updateLimitation() {
+            const limit = parseInt(document.getElementById('pathLimit').value);
+            
+            if (isNaN(limit) || limit < 0 || limit > 100) {
+                document.getElementById('limitResult').innerHTML = 
+                    '<div class="error-msg">Limit must be between 0 and 100</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/set_limitation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentLimitation = limit;
+                    document.getElementById('currentLimit').textContent = limit === 0 ? 'Unlimited' : limit;
+                    document.getElementById('limitResult').innerHTML = 
+                        `<div class="success-msg">Path limit updated to ${limit === 0 ? 'unlimited' : limit}</div>`;
+                    
+                    // Clear the message after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('limitResult').innerHTML = '';
+                    }, 3000);
+                } else {
+                    document.getElementById('limitResult').innerHTML = 
+                        `<div class="error-msg">${result.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('limitResult').innerHTML = 
+                    '<div class="error-msg">Error updating limitation</div>';
             }
         }
 
@@ -611,17 +697,59 @@ HTML_TEMPLATE = '''
                     
                     html += '</div>';
                     html += `<div class="score-display">Total Score: ${result.score}</div>`;
+                    
+                    // Add warning if score is close to limit
+                    if (currentLimitation > 0 && currentLimitation !== Infinity && result.score > currentLimitation * 0.8) {
+                        html += `<div class="warning-msg">⚠️ Note: This path score (${result.score}) is close to the current limit of ${currentLimitation}</div>`;
+                    }
+                    
                     html += '</div>';
                     
                     document.getElementById('pathResult').innerHTML = html;
                     highlightPath(result.path);
                 } else {
-                    document.getElementById('pathResult').innerHTML = 
-                        `<div class="error-msg">${result.message}</div>`;
+                    // Handle different failure reasons
+                    let errorHtml = '';
+                    
+                    if (result.reason === 'no_connection') {
+                        // No connection at all - they're in different components
+                        errorHtml = `
+                            <div class="error-msg">
+                                <strong>❌ No Connection Found</strong><br>
+                                ${result.message}
+                            </div>
+                            <div class="warning-msg" style="margin-top: 10px;">
+                                💡 <strong>Tip:</strong> These people are not connected through any path. 
+                                You need to add connections to bridge their separate networks.
+                            </div>
+                        `;
+                    } else if (result.reason === 'exceeds_limit') {
+                        // Connection exists but exceeds the weight limit
+                        errorHtml = `
+                            <div class="warning-msg">
+                                <strong>⚠️ Path Exceeds Limit</strong><br>
+                                ${result.message}
+                            </div>
+                            <div class="success-msg" style="margin-top: 10px;">
+                                ✅ <strong>Good news:</strong> A connection exists!<br>
+                                Try increasing the path limit above ${currentLimitation} to find the shortest path.
+                            </div>
+                        `;
+                    } else {
+                        // Generic error
+                        errorHtml = `<div class="error-msg">${result.message}</div>`;
+                    }
+                    
+                    document.getElementById('pathResult').innerHTML = errorHtml;
+                    
+                    // Clear any previous path highlights
+                    g.selectAll('.link').classed('highlighted', false);
+                    g.selectAll('.node').classed('path-node-highlighted', false);
+                    g.selectAll('.link-label').classed('path-label-highlighted', false);
                 }
             } catch (error) {
                 document.getElementById('pathResult').innerHTML = 
-                    '<div class="error-msg">Error finding path</div>';
+                    '<div class="error-msg">Error finding path: ' + error.message + '</div>';
             }
         }
         
@@ -737,6 +865,22 @@ HTML_TEMPLATE = '''
             }
         }
         
+        // Get current limitation from server
+        async function getCurrentLimitation() {
+            try {
+                const response = await fetch('/api/get_limitation');
+                const data = await response.json();
+                if (data.success) {
+                    currentLimitation = data.limit;
+                    document.getElementById('pathLimit').value = currentLimitation;
+                    document.getElementById('currentLimit').textContent = 
+                        currentLimitation === 0 ? 'Unlimited' : currentLimitation;
+                }
+            } catch (error) {
+                console.error('Error getting limitation:', error);
+            }
+        }
+        
         // Refresh graph
         function refreshGraph() {
             loadGraph();
@@ -747,6 +891,7 @@ HTML_TEMPLATE = '''
             initGraph();
             setupInputFocusTracking();
             loadGraph();
+            getCurrentLimitation();
         });
         
         // Handle window resize
@@ -775,6 +920,42 @@ def get_graph_data():
     """Get complete graph data for visualization"""
     return jsonify(backend.get_graph_data())
 
+@app.route('/api/set_limitation', methods=['POST'])
+def set_limitation():
+    """Set the path weight limitation"""
+    data = request.json
+    limit = data.get('limit')
+    
+    if limit is None:
+        return jsonify({'success': False, 'message': 'Limit value is required'})
+    
+    try:
+        limit = int(limit)
+        if limit < 0 or limit > 100:
+            return jsonify({'success': False, 'message': 'Limit must be between 0 and 100'})
+        
+        # Treat 0 as unlimited (set to a very high value)
+        if limit == 0:
+            backend.set_limitation(float('inf'))
+        else:
+            backend.set_limitation(limit)
+        
+        return jsonify({'success': True, 'message': f'Limitation set to {limit}'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/get_limitation')
+def get_limitation():
+    """Get the current path weight limitation"""
+    try:
+        current_limit = backend.graph.weight_limitation
+        # Convert inf back to 0 for unlimited
+        if current_limit == float('inf'):
+            current_limit = 0
+        return jsonify({'success': True, 'limit': current_limit})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/find_path', methods=['POST'])
 def find_path():
     """Find shortest path between two people"""
@@ -787,10 +968,23 @@ def find_path():
     
     score, path = backend.get_best_path(person1, person2)
     
-    if path is None:
+    # Handle the three different return cases
+    if score is None and path == []:
+        # Connection exists but exceeds limitation
+        current_limit = backend.graph.weight_limitation
+        if current_limit == float('inf'):
+            current_limit = "unlimited"
         return jsonify({
-            'success': False, 
-            'message': f'No connection found between {person1} and {person2}'
+            'success': False,
+            'reason': 'exceeds_limit',
+            'message': f'Connection exists between {person1} and {person2}, but the shortest path exceeds the current limit of {current_limit}'
+        })
+    elif score is None and path is None:
+        # No connection at all
+        return jsonify({
+            'success': False,
+            'reason': 'no_connection',
+            'message': f'No connection found between {person1} and {person2} - they are in different network components'
         })
     
     return jsonify({
