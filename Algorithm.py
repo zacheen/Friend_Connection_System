@@ -89,7 +89,7 @@ class Bidirectional_Dijkstra:
                             min_path = paths[0][new_fri][:-1] + paths[1][new_fri][::-1]
                             # since paths[0][new_fri][-1] == paths[1][new_fri][-1]
         if min_dist == inf:
-            return (None, None)
+            return (None, [])
         return (min_dist, min_path)
     
     # for testing # (Use this with find_min_path to verify the minimum weight path.)

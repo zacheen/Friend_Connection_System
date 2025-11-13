@@ -39,11 +39,11 @@ class Backend:
 
     # three posible return values:
     # 1. (path_len, path_list) : found the best path
-    # 2. (None, None) : no connection
+    # 2. (None, ) : no connection
     # 3. (None, []) : the path is too long (exceed limitation)
     def get_best_path(self, fri1, fri2):
         if not self.check_relation(fri1, fri2) :
-            return (None, [])
+            return (None, None)
         ret = self.graph.find_min_path(fri1, fri2)
         check = self.graph.Dijkstra(fri1, fri2)
         if check == inf :
