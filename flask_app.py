@@ -343,14 +343,6 @@ HTML_TEMPLATE = '''
                 <div class="section">
                     <h2>🔍 Find Shortest Path</h2>
                     <div class="input-group">
-                        <label for="pathLimit">Path Score Limit:</label>
-                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="30">
-                        <small>Maximum total score for a valid path (0 = unlimited)</small>
-                    </div>
-                    <button onclick="updateLimitation()" style="margin-bottom: 15px;">Update Limit</button>
-                    <div id="limitResult"></div>
-                    
-                    <div class="input-group">
                         <label for="person1">Person 1:</label>
                         <input type="text" id="person1" placeholder="Enter name">
                     </div>
@@ -360,6 +352,14 @@ HTML_TEMPLATE = '''
                     </div>
                     <button onclick="findPath()">Find Path</button>
                     <div id="pathResult"></div>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="pathLimit">Path Score Limit:</label>
+                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="30">
+                        <small>Maximum total score for a valid path (0 = unlimited)</small>
+                    </div>
+                    <button onclick="updateLimitation()">Update Limit</button>
+                    <div id="limitResult"></div>
                 </div>
                 
                 <div class="section">
