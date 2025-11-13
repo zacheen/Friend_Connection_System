@@ -25,6 +25,9 @@ class Backend:
     #     for fri1, fri2, score in relation :
     #         self.add_relation(fri1, fri2, score)
 
+    def set_limitation(self, limit):
+        self.graph.set_limitation(limit)
+
     def add_relation(self, fri1, fri2, connection_score):
         self.uf.union(fri1, fri2)
         self.graph.add_edge(fri1, fri2, connection_score)
@@ -34,9 +37,13 @@ class Backend:
             return self.uf.check_same_union(fri1, fri2)
         return False
 
+    # three posible return values:
+    # 1. (path_len, path_list) : found the best path
+    # 2. (None, None) : no connection
+    # 3. (None, []) : the path is too long (exceed limitation)
     def get_best_path(self, fri1, fri2):
         if not self.check_relation(fri1, fri2) :
-            return (None, None)
+            return (None, [])
         ret = self.graph.find_min_path(fri1, fri2)
         check = self.graph.Dijkstra(fri1, fri2)
         if check == inf :

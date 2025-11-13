@@ -32,7 +32,11 @@ from math import inf
     # checked with "https://leetcode.com/problems/path-with-maximum-probability/description/"
 class Bidirectional_Dijkstra:
     def __init__(self):
+        self.weight_limitation = 30 # result weight should be less than this value
         self.adj_matrix = defaultdict(lambda : defaultdict(lambda : inf))
+
+    def set_limitation(self, limit):
+        self.weight_limitation = limit
 
     def add_edge(self, n1, n2, weight):
         self.adj_matrix[n1][n2] = weight
@@ -71,6 +75,8 @@ class Bidirectional_Dijkstra:
             seen[direct].add(now_fri)
             for new_fri, new_weight in self.adj_matrix[now_fri].items():
                 new_dist = now_dist + new_weight
+                if new_dist >= self.weight_limitation :
+                    continue
                 if new_dist < dists[direct].get(new_fri, inf):
                     dists[direct][new_fri] = new_dist
                     heappush(node_heap, (new_dist, new_fri, direct))
@@ -78,7 +84,7 @@ class Bidirectional_Dijkstra:
                     if new_fri in dists[0] and new_fri in dists[1]: # if new_fri connects both sets
                         # check whether this path is better
                         totaldist = dists[0][new_fri] + dists[1][new_fri]
-                        if min_dist > totaldist:
+                        if totaldist < self.weight_limitation and min_dist > totaldist:
                             min_dist = totaldist
                             min_path = paths[0][new_fri][:-1] + paths[1][new_fri][::-1]
                             # since paths[0][new_fri][-1] == paths[1][new_fri][-1]
@@ -89,7 +95,7 @@ class Bidirectional_Dijkstra:
     # for testing # (Use this with find_min_path to verify the minimum weight path.)
         # if exceed limitation would return inf
     def Dijkstra(self, start, target, limitation = inf):
-        min_path = defaultdict(lambda : inf)
+        min_path = defaultdict(lambda : self.weight_limitation)
         min_path[start] = 0
         heap = [(0, start)]
         while heap:
@@ -103,6 +109,8 @@ class Bidirectional_Dijkstra:
                 if (new_path := now_path + nei_w) < min_path[nei_node] :
                     min_path[nei_node] = new_path
                     heappush(heap, (new_path, nei_node))
+        if min_path[target] == self.weight_limitation :
+            return inf
         return min_path[target]
 
 if __name__ == "__main__":
