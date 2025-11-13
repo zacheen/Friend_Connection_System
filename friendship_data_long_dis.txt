@@ -1,0 +1,32 @@
+Alice, Bob, 5
+Bob, Charlie, 3
+Charlie, David, 2
+Alice, David, 10
+-
+Emily, Frank, 4
+Frank, Grace, 6
+Grace, Henry, 3
+Emily, Henry, 15
+-
+Ivan, Julia, 2
+Julia, Kevin, 3
+Kevin, Laura, 4
+Ivan, Laura, 12
+Julia, Laura, 7
+-
+Mike, Nancy, 5
+-
+Oliver, Peter, 3
+Peter, Quinn, 2
+Quinn, Rachel, 4
+Rachel, Oliver, 8
+-
+Sam, Tom, 1
+Tom, Uma, 1
+Uma, Victor, 1
+Victor, Sam, 10
+Sam, Uma, 2
+Tom, Victor, 2
+-
+Ivan, long_path, 10
+David, long_path, 10
