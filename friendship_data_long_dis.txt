@@ -6,12 +6,12 @@ Alice, David, 10
 Emily, Frank, 4
 Frank, Grace, 6
 Grace, Henry, 3
-Emily, Henry, 15
+Emily, Henry, 10
 -
 Ivan, Julia, 2
 Julia, Kevin, 3
 Kevin, Laura, 4
-Ivan, Laura, 12
+Ivan, Laura, 10
 Julia, Laura, 7
 -
 Mike, Nancy, 5
