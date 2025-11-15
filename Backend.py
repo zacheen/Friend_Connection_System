@@ -81,6 +81,9 @@ class Backend:
             raise Exception
         return ret
     
+    def find_target(self, start, target):
+        return self.graph.Dijkstra(start, target)
+    
     def get_all_nodes(self):
         """Get all unique nodes in the graph"""
         nodes = set()
