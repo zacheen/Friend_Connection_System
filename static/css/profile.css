@@ -1,0 +1,102 @@
+body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #fff;
+        }
+        .profile-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            color: #333;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+        .back-link {
+            text-decoration: none;
+            color: #764ba2;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h1 {
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 2.2em;
+        }
+        .subtitle {
+            color: #764ba2;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        .meta {
+            display: flex;
+            gap: 20px;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #f8f6ff;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e4ddff;
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #5b48c4;
+            font-size: 1.1em;
+            letter-spacing: 0.03em;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .pill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 0;
+            list-style: none;
+        }
+        .pill-list li {
+            background: #fff;
+            border: 1px solid #d5c9ff;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9em;
+        }
+        .profile-footer {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .primary-btn {
+            background: #764ba2;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .primary-btn:hover {
+            background: #5b48c4;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 0;
+            color: #555;
+        }

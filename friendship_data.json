@@ -1,0 +1,36 @@
+{
+  "relations": [
+    { "friend1": "Alice", "friend2": "Bob", "score": 5 },
+    { "friend1": "Bob", "friend2": "Charlie", "score": 3 },
+    { "friend1": "Charlie", "friend2": "David", "score": 2 },
+    { "friend1": "Alice", "friend2": "David", "score": 10 },
+
+    { "friend1": "Emily", "friend2": "Frank", "score": 4 },
+    { "friend1": "Frank", "friend2": "Grace", "score": 6 },
+    { "friend1": "Grace", "friend2": "Henry", "score": 3 },
+    { "friend1": "Emily", "friend2": "Henry", "score": 10 },
+
+    { "friend1": "Ivan", "friend2": "Julia", "score": 2 },
+    { "friend1": "Julia", "friend2": "Kevin", "score": 3 },
+    { "friend1": "Kevin", "friend2": "Laura", "score": 4 },
+    { "friend1": "Ivan", "friend2": "Laura", "score": 10 },
+    { "friend1": "Julia", "friend2": "Laura", "score": 7 },
+
+    { "friend1": "Mike", "friend2": "Nancy", "score": 5 },
+
+    { "friend1": "Oliver", "friend2": "Peter", "score": 3 },
+    { "friend1": "Peter", "friend2": "Quinn", "score": 2 },
+    { "friend1": "Quinn", "friend2": "Rachel", "score": 4 },
+    { "friend1": "Rachel", "friend2": "Oliver", "score": 8 },
+
+    { "friend1": "Sam", "friend2": "Tom", "score": 1 },
+    { "friend1": "Tom", "friend2": "Uma", "score": 1 },
+    { "friend1": "Uma", "friend2": "Victor", "score": 1 },
+    { "friend1": "Victor", "friend2": "Sam", "score": 10 },
+    { "friend1": "Sam", "friend2": "Uma", "score": 2 },
+    { "friend1": "Tom", "friend2": "Victor", "score": 2 },
+
+    { "friend1": "Ivan", "friend2": "long_path", "score": 10 },
+    { "friend1": "David", "friend2": "long_path", "score": 10 }
+  ]
+}

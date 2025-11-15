@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from Algorithm import *
 
 class Backend:
@@ -7,9 +10,31 @@ class Backend:
     
     def __init__(self, path):
         self.init_space()
-        with open(path, "r") as fr:
-            while fr:
-                # deal with data
+        if not path:
+            return
+        data_path = Path(path)
+        if not data_path.exists():
+            raise FileNotFoundError(f"Friendship data file not found: {path}")
+        if data_path.suffix.lower() == ".json":
+            self._load_from_json(data_path)
+        else:
+            self._load_from_legacy_text(data_path)
+
+    def _load_from_json(self, data_path: Path):
+        with data_path.open("r", encoding="utf-8") as fr:
+            data = json.load(fr)
+        relations = data.get("relations", [])
+        for relation in relations:
+            fri1 = relation.get("friend1")
+            fri2 = relation.get("friend2")
+            score = relation.get("score")
+            if not fri1 or not fri2 or score is None:
+                continue
+            self.add_relation(fri1, fri2, int(score))
+
+    def _load_from_legacy_text(self, data_path: Path):
+        with data_path.open("r", encoding="utf-8") as fr:
+            while True:
                 input_line = fr.readline()
                 if input_line == "-\n":
                     continue

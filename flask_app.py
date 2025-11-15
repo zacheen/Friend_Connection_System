@@ -1,23 +1,39 @@
 from flask import Flask, jsonify, request, render_template_string
 from flask_cors import CORS
 from Backend import Backend
+from persona_data import PERSONAS, get_persona
 import os
 
 app = Flask(__name__)
 CORS(app)
 
 # Initialize backend
+def create_backend():
+    """Load backend data from any available friendship data file."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    possible_files = [
+        'friendship_data.json',
+        'friendship_data.txt',
+        'friendship_data_long_dis.txt',
+    ]
+    for data_file in possible_files:
+        file_path = os.path.join(base_dir, data_file)
+        if os.path.exists(file_path):
+            print(f"Loading friendship data from {file_path}")
+            return Backend(path=file_path)
+    
+    # Create empty backend if no data file exists
+    print("No friendship data file found. Initializing empty backend.")
+    backend_instance = Backend.__new__(Backend)
+    backend_instance.init_space()
+    return backend_instance
+
 # Handle different initialization scenarios
 try:
-    if os.path.exists('friendship_data.txt'):
-        backend = Backend(path='friendship_data.txt')
-    else:
-        # Create empty backend if no data file exists
-        backend = Backend.__new__(Backend)
-        backend.init_space()
+    backend = create_backend()
 except Exception as e:
     # Fallback to empty initialization if file reading fails
-    print(f"Warning: Could not load friendship_data.txt: {e}")
+    print(f"Warning: Could not load friendship data file: {e}")
     backend = Backend.__new__(Backend)
     backend.init_space()
 
@@ -30,318 +46,15 @@ HTML_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friend Connection System</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            gap: 20px;
-            height: calc(100vh - 120px);
-        }
-        
-        .controls {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow-y: auto;
-        }
-        
-        .graph-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .section:last-child {
-            border-bottom: none;
-        }
-        
-        h2 {
-            color: #764ba2;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-        
-        .input-group {
-            margin-bottom: 12px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
-        }
-        
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        
-        input[type="text"]:focus,
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #764ba2;
-        }
-        
-        small {
-            color: #666;
-            display: block;
-            margin-top: 5px;
-            font-size: 12px;
-        }
-        
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        .result-box {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            border: 2px solid #e0e0e0;
-        }
-        
-        .result-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        
-        .path-display {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 8px;
-            border: 1px solid #ddd;
-        }
-        
-        .path-node {
-            display: inline-block;
-            padding: 5px 10px;
-            background: #667eea;
-            color: white;
-            border-radius: 15px;
-            margin: 2px;
-        }
-        
-        .path-arrow {
-            display: inline-block;
-            margin: 0 5px;
-            color: #666;
-        }
-        
-        .score-display {
-            font-size: 1.2em;
-            color: #764ba2;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-        
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .error-msg {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .warning-msg {
-            background: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .stat-item {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.5em;
-            font-weight: 600;
-            color: #764ba2;
-        }
-        
-        .stat-label {
-            color: #666;
-            font-size: 0.9em;
-            margin-top: 3px;
-        }
-        
-        .limitation-display {
-            background: #f0f4ff;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            border: 1px solid #d0d8ff;
-            text-align: center;
-        }
-        
-        .limitation-value {
-            font-size: 1.1em;
-            font-weight: 600;
-            color: #667eea;
-        }
-        
-        /* Graph styling */
-        .node {
-            stroke: #fff;
-            stroke-width: 2px;
-            cursor: pointer;
-            transition: r 0.3s;
-        }
-        
-        .node:hover {
-            stroke-width: 3px;
-        }
-        
-        .link {
-            stroke-opacity: 0.6;
-            transition: stroke-width 0.3s;
-        }
-        
-        .link:hover {
-            stroke-width: 4px;
-            stroke-opacity: 1;
-        }
-        
-        .node-label {
-            font-size: 11px;
-            pointer-events: none;
-            text-anchor: middle;
-            fill: #333;
-            font-weight: 600;
-        }
-        
-        .link-label {
-            font-size: 9px;
-            fill: #333;
-            text-anchor: middle;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity 0.3s, font-size 0.3s;
-            font-weight: 600;
-            stroke: white;
-            stroke-width: 3px;
-            stroke-linejoin: round;
-            paint-order: stroke fill;
-        }
-        
-        .link-label.path-label-highlighted {
-            font-size: 11px;
-            fill: #ff6b6b;
-            font-weight: 800;
-        }
-        
-        .hide-labels .link-label {
-            opacity: 0;
-        }
-        
-        .highlighted {
-            stroke: #ff6b6b !important;
-            stroke-width: 4px !important;
-            stroke-opacity: 1 !important;
-        }
-        
-        .path-node-highlighted {
-            fill: #ff6b6b !important;
-            r: 10 !important;
-        }
-        
-        svg {
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>🤝 Friend Connection System</h1>
+        <h1>Friend Connection System</h1>
         <div class="main-content">
             <div class="controls">
                 <div class="section">
-                    <h2>🔍 Find Shortest Path</h2>
+                    <h2>Find Shortest Path</h2>
                     <div class="input-group">
                         <label for="person1">Person 1:</label>
                         <input type="text" id="person1" placeholder="Enter name">
@@ -352,6 +65,7 @@ HTML_TEMPLATE = '''
                     </div>
                     <button onclick="findPath()">Find Path</button>
                     <div id="pathResult"></div>
+                    <button onclick="resetPathInterface()" style="margin-top: 10px;">Reset Path View</button>
                     
                     <div class="input-group" style="margin-top: 20px;">
                         <label for="pathLimit">Path Score Limit:</label>
@@ -363,7 +77,7 @@ HTML_TEMPLATE = '''
                 </div>
                 
                 <div class="section">
-                    <h2>➕ Add Connection</h2>
+                    <h2>Add Connection</h2>
                     <div class="input-group">
                         <label for="friend1">Friend 1:</label>
                         <input type="text" id="friend1" placeholder="Enter name">
@@ -382,7 +96,7 @@ HTML_TEMPLATE = '''
                 </div>
                 
                 <div class="section">
-                    <h2>📊 Network Statistics</h2>
+                    <h2>Network Statistics</h2>
                     <div class="stats">
                         <div class="stat-item">
                             <div class="stat-value" id="nodeCount">0</div>
@@ -396,8 +110,42 @@ HTML_TEMPLATE = '''
                     <div class="limitation-display">
                         <div class="limitation-value">Current Path Limit: <span id="currentLimit">30</span></div>
                     </div>
-                    <button onclick="toggleLabels()" style="margin-top: 10px;">👁️ Hide/Show Edge Labels</button>
-                    <button onclick="refreshGraph()" style="margin-top: 10px;">🔄 Refresh Graph</button>
+                    <button onclick="toggleLabels()" style="margin-top: 10px;">Toggle Edge Labels</button>
+                    <button onclick="refreshGraph()" style="margin-top: 10px;">Refresh Graph</button>
+                </div>
+                <div class="section">
+                    <h2>Persona Spotlight</h2>
+                    <div id="personaPreviewEmpty" class="persona-helper">
+                        Back to HomeBack to HomeBack to HomeBack to Home||
+                    </div>
+                    <div id="personaPreviewError" class="error-msg hidden"></div>
+                    <div id="personaPreviewCard" class="persona-preview-card hidden">
+                        <div class="persona-preview-header">
+                            <div>
+                                <div class="persona-preview-name" id="personaName"></div>
+                                <div class="persona-preview-role" id="personaTitle"></div>
+                            </div>
+                            <div class="persona-meta" id="personaMeta"></div>
+                        </div>
+                        <p id="personaSummary" class="persona-summary" style="font-size: 0.95em; color: #444; margin-top: 10px;"></p>
+                        <div class="persona-tags" id="personaTraits"></div>
+                        <div class="persona-lists">
+                            <div>
+                                <h3 style="font-size: 0.9em; color: #5b48c4; margin-bottom: 4px;">Motivations & Goals</h3>
+                                <ul id="personaGoals" class="persona-list"></ul>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 0.9em; color: #5b48c4; margin-bottom: 4px;">Pain Points</h3>
+                                <ul id="personaPains" class="persona-list"></ul>
+                            </div>
+                        </div>
+                        <p id="personaTechnology" style="font-size: 0.9em; color: #555;"></p>
+                        <p id="personaInsight" style="font-size: 0.9em; color: #444; font-weight: 500;"></p>
+                        <div class="persona-preview-actions">
+                            <span class="persona-meta" id="personaStatus">Back to HomeBack to HomeBack to Home|</span>
+                            <a id="personaProfileButton" class="persona-link disabled" href="#" target="_blank" rel="noopener">Back to Home|</a>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -405,6 +153,13 @@ HTML_TEMPLATE = '''
                 <svg id="graph"></svg>
             </div>
         </div>
+    </div>
+
+    <div id="personaTooltip" class="persona-tooltip hidden">
+        <div class="tooltip-name" id="tooltipName"></div>
+        <div class="tooltip-role" id="tooltipTitle"></div>
+        <div class="tooltip-meta" id="tooltipMeta"></div>
+        <p class="tooltip-summary" id="tooltipSummary"></p>
     </div>
 
     <script>
@@ -415,6 +170,16 @@ HTML_TEMPLATE = '''
         let currentLimitation = 30;
         const nameInputIds = ['person1', 'person2', 'friend1', 'friend2'];
         let activeNameInput = null;
+        let personaPreviewElements = {};
+        let currentPersonaId = null;
+        let personaCache = {};
+        let personaTooltipElements = {};
+        let tooltipHideTimeout = null;
+        const defaultPathMessage = `
+            <div class="info-msg">
+                Select two friends and press "Find Path" to display the shortest route and total score.
+            </div>
+        `;
 
         function setupInputFocusTracking() {
             nameInputIds.forEach(id => {
@@ -427,6 +192,305 @@ HTML_TEMPLATE = '''
             });
         }
 
+        function initPersonaPreview() {
+            personaPreviewElements = {
+                empty: document.getElementById('personaPreviewEmpty'),
+                error: document.getElementById('personaPreviewError'),
+                card: document.getElementById('personaPreviewCard'),
+                name: document.getElementById('personaName'),
+                title: document.getElementById('personaTitle'),
+                meta: document.getElementById('personaMeta'),
+                summary: document.getElementById('personaSummary'),
+                traits: document.getElementById('personaTraits'),
+                goals: document.getElementById('personaGoals'),
+                pains: document.getElementById('personaPains'),
+                technology: document.getElementById('personaTechnology'),
+                insight: document.getElementById('personaInsight'),
+                link: document.getElementById('personaProfileButton'),
+                status: document.getElementById('personaStatus')
+            };
+        }
+
+        function showPersonaPlaceholder(message) {
+            if (personaPreviewElements.empty) {
+                personaPreviewElements.empty.textContent = message;
+                personaPreviewElements.empty.classList.remove('hidden');
+            }
+            if (personaPreviewElements.error) {
+                personaPreviewElements.error.classList.add('hidden');
+                personaPreviewElements.error.textContent = '';
+            }
+            if (personaPreviewElements.card) {
+                personaPreviewElements.card.classList.add('hidden');
+            }
+            if (personaPreviewElements.link) {
+                personaPreviewElements.link.classList.add('disabled');
+                personaPreviewElements.link.href = '#';
+            }
+        }
+
+        async function getPersonaData(name) {
+            if (!name) {
+                throw new Error('Invalid name');
+            }
+            if (personaCache[name]) {
+                return personaCache[name];
+            }
+            const response = await fetch(`/api/persona/${encodeURIComponent(name)}`);
+            const data = await response.json();
+            if (!response.ok || !data.success || !data.persona) {
+                throw new Error(data.message || 'Unable to load profile');
+            }
+            personaCache[name] = data.persona;
+            return data.persona;
+        }
+
+        function initPersonaTooltip() {
+            personaTooltipElements = {
+                container: document.getElementById('personaTooltip'),
+                name: document.getElementById('tooltipName'),
+                title: document.getElementById('tooltipTitle'),
+                meta: document.getElementById('tooltipMeta'),
+                summary: document.getElementById('tooltipSummary'),
+            };
+            if (personaTooltipElements.container) {
+                personaTooltipElements.container.classList.add('hidden');
+                personaTooltipElements.container.classList.remove('loading');
+            }
+        }
+
+        function truncateText(text, maxLength = 120) {
+            if (!text) return '';
+            return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+        }
+
+        function positionPersonaTooltip(x, y) {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip) return;
+            const offset = 16;
+            const padding = 12;
+            const tooltipWidth = tooltip.offsetWidth || 260;
+            const tooltipHeight = tooltip.offsetHeight || 140;
+            let left = x + offset;
+            let top = y + offset;
+            const maxX = window.innerWidth - tooltipWidth - padding;
+            const maxY = window.innerHeight - tooltipHeight - padding;
+            left = Math.min(Math.max(padding, left), Math.max(padding, maxX));
+            top = Math.min(Math.max(padding, top), Math.max(padding, maxY));
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        }
+
+        function showPersonaTooltipLoading(name, event) {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip) return;
+            if (tooltipHideTimeout) {
+                clearTimeout(tooltipHideTimeout);
+                tooltipHideTimeout = null;
+            }
+            tooltip.classList.remove('hidden');
+            tooltip.classList.add('loading');
+            if (personaTooltipElements.name) {
+                personaTooltipElements.name.textContent = name || 'Loading...';
+            }
+            if (personaTooltipElements.title) {
+                personaTooltipElements.title.textContent = 'Loading...';
+            }
+            if (personaTooltipElements.meta) {
+                personaTooltipElements.meta.textContent = '';
+            }
+            if (personaTooltipElements.summary) {
+                personaTooltipElements.summary.textContent = 'Fetching profile...';
+            }
+            if (event) {
+                positionPersonaTooltip(event.clientX, event.clientY);
+            }
+        }
+
+        function renderPersonaTooltip(persona, event) {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip || !persona) return;
+            if (tooltipHideTimeout) {
+                clearTimeout(tooltipHideTimeout);
+                tooltipHideTimeout = null;
+            }
+            tooltip.classList.remove('hidden');
+            tooltip.classList.remove('loading');
+            if (personaTooltipElements.name) {
+                personaTooltipElements.name.textContent = persona.full_name;
+            }
+            if (personaTooltipElements.title) {
+                personaTooltipElements.title.textContent = persona.title;
+            }
+            if (personaTooltipElements.meta) {
+                personaTooltipElements.meta.textContent = `ID: ${persona.id} | Age ${persona.age}`;
+            }
+            if (personaTooltipElements.summary) {
+                const summary = persona.summary || persona.system_insight || '';
+                personaTooltipElements.summary.textContent = truncateText(summary, 140);
+            }
+            if (event) {
+                positionPersonaTooltip(event.clientX, event.clientY);
+            }
+        }
+
+        function showPersonaTooltipError(name, error, event) {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip) return;
+            tooltip.classList.remove('hidden');
+            tooltip.classList.add('loading');
+            if (personaTooltipElements.name) {
+                personaTooltipElements.name.textContent = name;
+            }
+            if (personaTooltipElements.title) {
+                personaTooltipElements.title.textContent = 'No data available';
+            }
+            if (personaTooltipElements.meta) {
+                personaTooltipElements.meta.textContent = '';
+            }
+            if (personaTooltipElements.summary) {
+                personaTooltipElements.summary.textContent = error?.message || 'This friend has not shared a profile yet.';
+            }
+            if (event) {
+                positionPersonaTooltip(event.clientX, event.clientY);
+            }
+        }
+
+        function hidePersonaTooltip() {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip) return;
+            tooltip.classList.add('hidden');
+            tooltip.classList.remove('loading');
+        }
+
+        function scheduleTooltipHide() {
+            if (tooltipHideTimeout) {
+                clearTimeout(tooltipHideTimeout);
+            }
+            tooltipHideTimeout = setTimeout(() => {
+                hidePersonaTooltip();
+            }, 200);
+        }
+
+        function updateTooltipPosition(event) {
+            const tooltip = personaTooltipElements.container;
+            if (!tooltip || tooltip.classList.contains('hidden')) return;
+            positionPersonaTooltip(event.clientX, event.clientY);
+        }
+
+        async function handleNodeHover(event, nodeData) {
+            const name = nodeData?.id || nodeData?.label;
+            if (!name) return;
+            showPersonaTooltipLoading(name, event);
+            try {
+                const persona = await getPersonaData(name);
+                renderPersonaTooltip(persona, event);
+            } catch (error) {
+                showPersonaTooltipError(name, error, event);
+            }
+        }
+
+        function fillList(element, items) {
+            if (!element) return;
+            element.innerHTML = '';
+            if (!items || !items.length) {
+                const li = document.createElement('li');
+                li.textContent = 'No data available';
+                element.appendChild(li);
+                return;
+            }
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                element.appendChild(li);
+            });
+        }
+
+        function renderPersonaPreview(persona) {
+            if (!personaPreviewElements.card || !persona) {
+                showPersonaPlaceholder("Select a node to preview this friend's profile.");
+                return;
+            }
+
+            if (personaPreviewElements.empty) {
+                personaPreviewElements.empty.classList.add('hidden');
+            }
+            if (personaPreviewElements.error) {
+                personaPreviewElements.error.classList.add('hidden');
+                personaPreviewElements.error.textContent = '';
+            }
+
+            personaPreviewElements.name.textContent = persona.full_name;
+            personaPreviewElements.title.textContent = persona.title;
+            personaPreviewElements.meta.textContent = `ID: ${persona.id} | Age ${persona.age}`;
+            personaPreviewElements.summary.textContent = persona.summary;
+            personaPreviewElements.technology.textContent = persona.technology;
+            personaPreviewElements.insight.textContent = persona.system_insight;
+
+            if (personaPreviewElements.traits) {
+                personaPreviewElements.traits.innerHTML = '';
+                (persona.personality_traits || []).forEach(trait => {
+                    const pill = document.createElement('span');
+                    pill.className = 'persona-tag';
+                    pill.textContent = trait;
+                    personaPreviewElements.traits.appendChild(pill);
+                });
+            }
+
+            fillList(personaPreviewElements.goals, persona.goals);
+            fillList(personaPreviewElements.pains, persona.pain_points);
+
+            if (personaPreviewElements.link) {
+                personaPreviewElements.link.href = `/profile/${encodeURIComponent(persona.id)}`;
+                personaPreviewElements.link.classList.remove('disabled');
+            }
+
+            if (personaPreviewElements.status) {
+                personaPreviewElements.status.textContent = `Currently selected: ${persona.id} (double-click the node or use the button to open the full page)`;
+            }
+
+            personaPreviewElements.card.classList.remove('hidden');
+        }
+
+        async function loadPersonaPreview(name) {
+            if (!name) {
+                showPersonaPlaceholder("Select a node to preview this friend's profile.");
+                return;
+            }
+
+            currentPersonaId = name;
+            const requestName = name;
+
+            if (personaPreviewElements.error) {
+                personaPreviewElements.error.classList.add('hidden');
+                personaPreviewElements.error.textContent = '';
+            }
+
+            showPersonaPlaceholder(`Loading ${name}'s profile...`);
+
+            try {
+                const persona = await getPersonaData(name);
+                if (currentPersonaId !== requestName) {
+                    return;
+                }
+                renderPersonaPreview(persona);
+            } catch (error) {
+                if (currentPersonaId !== requestName) {
+                    return;
+                }
+                if (personaPreviewElements.error) {
+                    personaPreviewElements.error.textContent = error.message || 'Unable to load profile';
+                    personaPreviewElements.error.classList.remove('hidden');
+                }
+                showPersonaPlaceholder(`${name} does not have a profile yet.`);
+            }
+        }
+
+        function openPersonaPage(name) {
+            if (!name) return;
+            window.open(`/profile/${encodeURIComponent(name)}`, '_blank');
+        }
+
         function getTrackedInputs() {
             return nameInputIds
                 .map(id => document.getElementById(id))
@@ -435,12 +499,14 @@ HTML_TEMPLATE = '''
 
         function handleNodeClick(nodeData) {
             const inputs = getTrackedInputs();
-            if (!inputs.length) {
+            const name = nodeData?.id || nodeData?.label;
+            if (!name) {
                 return;
             }
 
-            const name = nodeData?.id ?? nodeData?.label;
-            if (!name) {
+            loadPersonaPreview(name);
+
+            if (!inputs.length) {
                 return;
             }
 
@@ -587,7 +653,14 @@ HTML_TEMPLATE = '''
                 .attr('r', 7)
                 .attr('fill', '#667eea')
                 .call(drag(simulation))
-                .on('click', (event, d) => handleNodeClick(d));
+                .on('click', (event, d) => handleNodeClick(d))
+                .on('dblclick', (event, d) => {
+                    event.stopPropagation();
+                    openPersonaPage(d.id || d.label);
+                })
+                .on('mouseenter', (event, d) => handleNodeHover(event, d))
+                .on('mousemove', updateTooltipPosition)
+                .on('mouseleave', () => scheduleTooltipHide());
 
             // Add node labels
             const nodeLabel = nodeLabelGroup.selectAll('text')
@@ -596,7 +669,14 @@ HTML_TEMPLATE = '''
                 .attr('class', 'node-label')
                 .text(d => d.label)
                 .attr('dy', -12)
-                .on('click', (event, d) => handleNodeClick(d));
+                .on('click', (event, d) => handleNodeClick(d))
+                .on('dblclick', (event, d) => {
+                    event.stopPropagation();
+                    openPersonaPage(d.id || d.label);
+                })
+                .on('mouseenter', (event, d) => handleNodeHover(event, d))
+                .on('mousemove', updateTooltipPosition)
+                .on('mouseleave', () => scheduleTooltipHide());
             
             // Update positions on tick
             simulation
@@ -700,7 +780,7 @@ HTML_TEMPLATE = '''
                     result.path.forEach((node, i) => {
                         html += `<span class="path-node">${node}</span>`;
                         if (i < result.path.length - 1) {
-                            html += '<span class="path-arrow">→</span>';
+                        html += '<span class="path-arrow">&rarr;</span>';
                         }
                     });
                     
@@ -718,7 +798,7 @@ HTML_TEMPLATE = '''
                         // No connection at all - they're in different components
                         errorHtml = `
                             <div class="error-msg">
-                                <strong>❌ No Connection Found</strong><br>
+                                <strong>No Connection Found</strong><br>
                                 ${result.message}
                             </div>
                         `;
@@ -726,7 +806,7 @@ HTML_TEMPLATE = '''
                         // Connection exists but exceeds the weight limit
                         errorHtml = `
                             <div class="warning-msg">
-                                <strong>⚠️ Path Exceeds Limit</strong><br>
+                                <strong>Path Exceeds Limit</strong><br>
                                 ${result.message}
                             </div>
                         `;
@@ -783,6 +863,22 @@ HTML_TEMPLATE = '''
                     
                     return isInPath;
                 });
+        }
+
+        function resetPathInterface() {
+            const resultContainer = document.getElementById('pathResult');
+            if (resultContainer) {
+                resultContainer.innerHTML = defaultPathMessage;
+            }
+            const p1 = document.getElementById('person1');
+            const p2 = document.getElementById('person2');
+            if (p1) p1.value = '';
+            if (p2) p2.value = '';
+            if (g) {
+                g.selectAll('.link').classed('highlighted', false);
+                g.selectAll('.node').classed('path-node-highlighted', false);
+                g.selectAll('.link-label').classed('path-label-highlighted', false);
+            }
         }
         
         // Add new connection
@@ -885,6 +981,13 @@ HTML_TEMPLATE = '''
         window.addEventListener('load', () => {
             initGraph();
             setupInputFocusTracking();
+            initPersonaPreview();
+            initPersonaTooltip();
+            showPersonaPlaceholder("Select a node to preview this friend's profile.");
+            const pathResult = document.getElementById('pathResult');
+            if (pathResult) {
+                pathResult.innerHTML = defaultPathMessage;
+            }
             loadGraph();
             getCurrentLimitation();
         });
@@ -906,9 +1009,108 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
+PROFILE_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ persona.full_name if persona else person_id }} - Friend Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+</head>
+<body>
+    <div class="profile-container">
+        <a class="back-link" href="/">&#8592; Back to Home</a>
+        {% if persona %}
+            <h1>{{ persona.full_name }}</h1>
+            <p class="subtitle">{{ persona.title }}</p>
+            <div class="meta">
+                <span>Nickname: {{ persona.id }}</span>
+                <span>Age: {{ persona.age }}</span>
+            </div>
+            <div class="card">
+                <h2>Profile Summary</h2>
+                <p>{{ persona.summary }}</p>
+            </div>
+            <div class="profile-grid">
+                <div class="card">
+                    <h2>Personality Traits</h2>
+                    <ul class="pill-list">
+                        {% for trait in persona.personality_traits %}
+                        <li>{{ trait }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card">
+                    <h2>Technology & Social Behavior</h2>
+                    <p>{{ persona.technology }}</p>
+                </div>
+                <div class="card">
+                    <h2>Pain Points</h2>
+                    <ul>
+                        {% for pain in persona.pain_points %}
+                        <li>{{ pain }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card">
+                    <h2>Motivations & Goals</h2>
+                    <ul>
+                        {% for goal in persona.goals %}
+                        <li>{{ goal }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h2>System Insight</h2>
+                <p>{{ persona.system_insight }}</p>
+            </div>
+            <div class="profile-footer">
+                <p>To explore more about {{ persona.full_name }} and their relationships, please return to the interactive network.</p>
+                <a class="primary-btn" href="/">Back to Friend Connection System</a>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h2>No profile found for {{ person_id }}</h2>
+                <p>This node does not have a self-introduction yet. Please return to the main page.</p>
+                <a class="primary-btn" href="/">Back to Home</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
 @app.route('/')
 def index():
     return render_template_string(HTML_TEMPLATE)
+
+
+@app.route('/profile/<person_id>')
+def profile_page(person_id):
+    """Render a standalone profile page for a given person."""
+    persona = get_persona(person_id)
+    return render_template_string(
+        PROFILE_TEMPLATE,
+        persona=persona,
+        person_id=person_id
+    )
+
+
+@app.route('/api/persona/<person_id>')
+def persona_api(person_id):
+    """Return persona data for front-end previews."""
+    persona = get_persona(person_id)
+    if not persona:
+        return jsonify({
+            'success': False,
+            'message': f'No persona data for {person_id}'
+        }), 404
+    return jsonify({
+        'success': True,
+        'persona': persona
+    })
 
 @app.route('/api/graph_data')
 def get_graph_data():
