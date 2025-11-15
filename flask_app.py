@@ -3,6 +3,7 @@ from flask_cors import CORS
 from Backend import Backend
 from persona_data import PERSONAS, get_persona
 import os
+import atexit
 
 app = Flask(__name__)
 CORS(app)
@@ -36,6 +37,7 @@ except Exception as e:
     print(f"Warning: Could not load friendship data file: {e}")
     backend = Backend.__new__(Backend)
     backend.init_space()
+atexit.register(lambda : backend.when_exit())
 
 # HTML template will be served from here
 HTML_TEMPLATE = '''

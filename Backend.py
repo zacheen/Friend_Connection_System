@@ -12,28 +12,31 @@ class Backend:
         self.init_space()
         if not path:
             return
-        data_path = Path(path)
-        if not data_path.exists():
+        self.data_path = Path(path)
+        if not self.data_path.exists():
             raise FileNotFoundError(f"Friendship data file not found: {path}")
-        if data_path.suffix.lower() == ".json":
-            self._load_from_json(data_path)
+        if self.data_path.suffix.lower() == ".json":
+            print("read relation from json file")
+            self._load_from_json()
         else:
-            self._load_from_legacy_text(data_path)
+            self._load_from_legacy_text()
+        self.save_data_path = self.data_path.with_name(self.data_path.name + "_new_data")
+    
+    def when_exit(self):
+        self._save_to_json()
 
-    def _load_from_json(self, data_path: Path):
-        with data_path.open("r", encoding="utf-8") as fr:
+    def _load_from_json(self):
+        with self.data_path.open("r", encoding="utf-8") as fr:
             data = json.load(fr)
         relations = data.get("relations", [])
-        for relation in relations:
-            fri1 = relation.get("friend1")
-            fri2 = relation.get("friend2")
-            score = relation.get("score")
-            if not fri1 or not fri2 or score is None:
+        for info in relations:
+            if len(info) != 3:
                 continue
+            fri1, fri2, score = info
             self.add_relation(fri1, fri2, int(score))
-
-    def _load_from_legacy_text(self, data_path: Path):
-        with data_path.open("r", encoding="utf-8") as fr:
+    
+    def _load_from_legacy_text(self):
+        with self.data_path.open("r", encoding="utf-8") as fr:
             while True:
                 input_line = fr.readline()
                 if input_line == "-\n":
@@ -44,6 +47,43 @@ class Backend:
                 fri1, fri2, score = input_line.split(", ")
                 score = int(score[:-1])
                 self.add_relation(fri1, fri2, score)
+
+    def _dump_compact_list_json(self, data): # hardcode
+        key = "relations"
+        
+        print("export_file:",str(self.save_data_path))
+        
+        with open(self.save_data_path, "w", encoding="utf8") as fw:
+            # 開頭大括號
+            fw.write("{\n")
+
+            # 寫 key 與中括號開頭
+            fw.write(f'  "{key}": [\n')
+
+            # 逐行寫入內層 list 內容
+            for i, item in enumerate(data[key]):
+                line = "    " + json.dumps(item, ensure_ascii=False)
+                if i != len(data) - 1:
+                    line += ","
+                fw.write(line + "\n")
+
+            # 關閉中括號與大括號
+            fw.write("  ]\n")
+            fw.write("}\n")
+
+    def _save_to_json(self):
+        relations = []
+        for fri1, fri2_info in self.graph.adj_matrix.items():
+            for fri2, score in fri2_info.items():
+                if fri1 < fri2:  # to avoid duplicates
+                    relations.append([fri1, fri2, score])
+        data = {"relations": relations}
+        
+        # # normal saving method
+        # with save_data_path.open("w", encoding="utf-8") as fw:
+        #     json.dump(data, fw, indent=4)
+        # # for better readability
+        self._dump_compact_list_json(data)
 
     # def __init__(self, relation):
     #     self.init_space()
