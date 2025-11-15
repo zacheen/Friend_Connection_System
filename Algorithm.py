@@ -94,7 +94,7 @@ class Bidirectional_Dijkstra:
     
     # for testing # (Use this with find_min_path to verify the minimum weight path.)
         # if exceed limitation would return inf
-    def Dijkstra(self, start, target, limitation = inf):
+    def Dijkstra(self, start, target):
         min_path = defaultdict(lambda : self.weight_limitation)
         min_path[start] = 0
         heap = [(0, start)]
@@ -102,7 +102,7 @@ class Bidirectional_Dijkstra:
             now_path, now_node = heappop(heap)
             if now_path > min_path[now_node] :
                 continue
-            if now_path > limitation or now_node == target:
+            if now_node == target:
                 break
             # min_path[now_node] = now_path # no needed
             for nei_node, nei_w in self.adj_matrix[now_node].items() :
