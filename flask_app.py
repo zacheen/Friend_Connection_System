@@ -649,10 +649,20 @@ HTML_TEMPLATE = '''
                 } else {
                     document.getElementById('targetResult').innerHTML = 
                         `<div class="error-msg">${result.message}</div>`;
+                    
+                    // Clear any previous path highlights
+                    g.selectAll('.link').classed('highlighted', false);
+                    g.selectAll('.node').classed('path-node-highlighted', false);
+                    g.selectAll('.link-label').classed('path-label-highlighted', false);
                 }
             } catch (error) {
                 document.getElementById('targetResult').innerHTML = 
                     '<div class="error-msg">Error finding target: ' + error.message + '</div>';
+                
+                // Clear any previous path highlights
+                g.selectAll('.link').classed('highlighted', false);
+                g.selectAll('.node').classed('path-node-highlighted', false);
+                g.selectAll('.link-label').classed('path-label-highlighted', false);
             }
         }
 
@@ -893,6 +903,11 @@ HTML_TEMPLATE = '''
             } catch (error) {
                 document.getElementById('pathResult').innerHTML = 
                     '<div class="error-msg">Error finding path: ' + error.message + '</div>';
+                
+                // Clear any previous path highlights
+                g.selectAll('.link').classed('highlighted', false);
+                g.selectAll('.node').classed('path-node-highlighted', false);
+                g.selectAll('.link-label').classed('path-label-highlighted', false);
             }
         }
         
