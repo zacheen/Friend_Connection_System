@@ -79,6 +79,20 @@ HTML_TEMPLATE = '''
                 </div>
                 
                 <div class="section">
+                    <h2>Find Target Profile</h2>
+                    <div class="input-group">
+                        <label for="startPerson">Starting Person:</label>
+                        <input type="text" id="startPerson" placeholder="Enter name">
+                    </div>
+                    <div class="input-group">
+                        <label for="targetKeyword">Target Keyword:</label>
+                        <input type="text" id="targetKeyword" placeholder="Enter keyword to search in profiles">
+                    </div>
+                    <button onclick="findTarget()">Find Target</button>
+                    <div id="targetResult"></div>
+                </div>
+                
+                <div class="section">
                     <h2>Add Connection</h2>
                     <div class="input-group">
                         <label for="friend1">Friend 1:</label>
@@ -170,7 +184,7 @@ HTML_TEMPLATE = '''
         let svg;
         let g;
         let currentLimitation = 30;
-        const nameInputIds = ['person1', 'person2', 'friend1', 'friend2'];
+        const nameInputIds = ['person1', 'person2', 'friend1', 'friend2', 'startPerson'];
         let activeNameInput = null;
         let personaPreviewElements = {};
         let currentPersonaId = null;
@@ -587,6 +601,55 @@ HTML_TEMPLATE = '''
             } catch (error) {
                 document.getElementById('limitResult').innerHTML = 
                     '<div class="error-msg">Error updating limitation</div>';
+            }
+        }
+
+        // Find target person with keyword
+        async function findTarget() {
+            const startPerson = document.getElementById('startPerson').value;
+            const targetKeyword = document.getElementById('targetKeyword').value;
+            
+            if (!startPerson || !targetKeyword) {
+                document.getElementById('targetResult').innerHTML = 
+                    '<div class="error-msg">Please enter both starting person and target keyword</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/find_target', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start: startPerson, target: targetKeyword })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    let html = '<div class="result-box">';
+                    html += '<div class="result-title">Target Found!</div>';
+                    html += `<div class="found-person">Person: <strong>${result.found_person}</strong></div>`;
+                    html += '<div class="path-display">';
+                    
+                    result.path.forEach((node, i) => {
+                        html += `<span class="path-node">${node}</span>`;
+                        if (i < result.path.length - 1) {
+                            html += '<span class="path-arrow">&rarr;</span>';
+                        }
+                    });
+                    
+                    html += '</div>';
+                    html += `<div class="match-info">Matched keyword "${targetKeyword}" in ${result.found_person}'s profile</div>`;
+                    html += '</div>';
+                    
+                    document.getElementById('targetResult').innerHTML = html;
+                    highlightPath(result.path);
+                } else {
+                    document.getElementById('targetResult').innerHTML = 
+                        `<div class="error-msg">${result.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('targetResult').innerHTML = 
+                    '<div class="error-msg">Error finding target: ' + error.message + '</div>';
             }
         }
 
@@ -1191,6 +1254,34 @@ def find_path():
         'score': score,
         'path': path
     })
+
+@app.route('/api/find_target', methods=['POST'])
+def find_target():
+    """Find a person whose profile contains a specific keyword"""
+    data = request.json
+    start = data.get('start')
+    target = data.get('target')
+    
+    if not start or not target:
+        return jsonify({'success': False, 'message': 'Both starting person and target keyword are required'})
+    
+    try:
+        found_person, path = backend.find_target(start, target)
+        
+        if found_person is None:
+            return jsonify({
+                'success': False,
+                'message': f'No person found with "{target}" in their profile from {start}'
+            })
+        
+        return jsonify({
+            'success': True,
+            'found_person': found_person,
+            'path': path,
+            'message': f'Found {found_person} with matching profile'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/add_relation', methods=['POST'])
 def add_relation():
