@@ -94,24 +94,43 @@ class Bidirectional_Dijkstra:
     
     # for testing # (Use this with find_min_path to verify the minimum weight path.)
         # if exceed limitation would return inf
-    def Dijkstra(self, start, target):
+    # find_type 
+        # : None - specific person's name
+        # : "" - include specific info in find_type
+    def Dijkstra(self, start, target, find_info = None, get_info = None):
+        def back_track_path(target_node):
+            path = []
+            current = target_node
+            while current != start:
+                path.append(current)
+                current = prev_node[current]
+            path.append(start)
+            path.reverse()
+            return path
+        
         min_path = defaultdict(lambda : self.weight_limitation)
         min_path[start] = 0
+        prev_node = {}
         heap = [(0, start)]
         while heap:
             now_path, now_node = heappop(heap)
             if now_path > min_path[now_node] :
                 continue
-            if now_node == target:
-                break
+            if find_info == None :
+                if now_node == target:
+                    return (now_node, back_track_path(now_node))
+            else :
+                if (persona := get_info(now_node)) != None :
+                    if (search_info := persona.get(find_info)) != None :
+                        if target in search_info:
+                            return (now_node, back_track_path(now_node))
             # min_path[now_node] = now_path # no needed
             for nei_node, nei_w in self.adj_matrix[now_node].items() :
                 if (new_path := now_path + nei_w) < min_path[nei_node] :
                     min_path[nei_node] = new_path
+                    prev_node[nei_node] = now_node
                     heappush(heap, (new_path, nei_node))
-        if min_path[target] == self.weight_limitation :
-            return inf
-        return min_path[target]
+        return (None, None)
 
 if __name__ == "__main__":
     pass

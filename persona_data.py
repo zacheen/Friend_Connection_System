@@ -306,7 +306,7 @@ PERSONAS = {
         "summary": (
             "Laura, 29, is a university graduate who maintains strong ties with her "
             "alma mater. She values giving back to students through advice and "
-            "networking."
+            "networking. Proud of working in Google."
         ),
         "personality_traits": ["Friendly", "Professional", "Supportive", "Loyal"],
         "pain_points": [

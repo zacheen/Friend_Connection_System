@@ -2,11 +2,13 @@ import json
 from pathlib import Path
 
 from Algorithm import *
+from persona_data import PERSONAS, get_persona
 
 class Backend:
     def init_space(self):
         self.uf = UF_by_size()
         self.graph = Bidirectional_Dijkstra()
+        self.get_persona = get_persona
     
     def __init__(self, path):
         self.init_space()
@@ -106,23 +108,23 @@ class Backend:
 
     # three posible return values:
     # 1. (path_len, path_list) : found the best path
-    # 2. (None, ) : no connection
+    # 2. (None, None) : no connection
     # 3. (None, []) : the path is too long (exceed limitation)
     def get_best_path(self, fri1, fri2):
         if not self.check_relation(fri1, fri2) :
             return (None, None)
         ret = self.graph.find_min_path(fri1, fri2)
         check = self.graph.Dijkstra(fri1, fri2)
-        if check == inf :
-            if ret[0] != None :
-                raise Exception
-        elif ret[0] != check :
+        if ret[0] != check[0] :
             print(check, ret)
             raise Exception
         return ret
     
+    # three posible return values:
+    # 1. (path_len, path_list) : found the best path
+    # 2. (None, None) : no connection
     def find_target(self, start, target):
-        return self.graph.Dijkstra(start, target)
+        return self.graph.Dijkstra(start, target, find_info="summary", get_info=self.get_persona)
     
     def get_all_nodes(self):
         """Get all unique nodes in the graph"""
@@ -165,4 +167,5 @@ class Backend:
         return [list(component) for component in components.values()]
 
 if __name__ == "__main__":
-    pass
+    backend = Backend('friendship_data.json')
+    print(backend.find_target("Bob", "Google"))
