@@ -168,4 +168,5 @@ class Backend:
 
 if __name__ == "__main__":
     backend = Backend('friendship_data.json')
-    print(backend.find_target("Bob", "Google"))
+    print(backend.get_best_path("Kevin", "Charlie"))
+    # print(backend.find_target("Bob", "Google"))

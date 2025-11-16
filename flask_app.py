@@ -56,6 +56,20 @@ HTML_TEMPLATE = '''
         <div class="main-content">
             <div class="controls">
                 <div class="section">
+                    <h2>Path Score Limit</h2>
+                    <div class="input-group">
+                        <label for="pathLimit">Maximum Path Score:</label>
+                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="0">
+                        <small>Maximum total score for a valid path (0 = unlimited)</small>
+                    </div>
+                    <button onclick="updateLimitation()">Update Limit</button>
+                    <div id="limitResult"></div>
+                    <div class="limitation-display" style="margin-top: 10px;">
+                        <div class="limitation-value">Current Limit: <span id="currentLimit">30</span></div>
+                    </div>
+                </div>
+                
+                <div class="section">
                     <h2>Find Shortest Path</h2>
                     <div class="input-group">
                         <label for="person1">Person 1:</label>
@@ -68,14 +82,6 @@ HTML_TEMPLATE = '''
                     <button onclick="findPath()">Find Path</button>
                     <div id="pathResult"></div>
                     <button onclick="resetPathInterface()" style="margin-top: 10px;">Reset Path View</button>
-                    
-                    <div class="input-group" style="margin-top: 20px;">
-                        <label for="pathLimit">Path Score Limit:</label>
-                        <input type="number" id="pathLimit" placeholder="0-100" min="0" max="100" value="0">
-                        <small>Maximum total score for a valid path (0 = unlimited)</small>
-                    </div>
-                    <button onclick="updateLimitation()">Update Limit</button>
-                    <div id="limitResult"></div>
                 </div>
                 
                 <div class="section">
@@ -122,9 +128,6 @@ HTML_TEMPLATE = '''
                             <div class="stat-value" id="edgeCount">0</div>
                             <div class="stat-label">Connections</div>
                         </div>
-                    </div>
-                    <div class="limitation-display">
-                        <div class="limitation-value">Current Path Limit: <span id="currentLimit">30</span></div>
                     </div>
                     <button onclick="toggleLabels()" style="margin-top: 10px;">Toggle Edge Labels</button>
                     <button onclick="refreshGraph()" style="margin-top: 10px;">Refresh Graph</button>

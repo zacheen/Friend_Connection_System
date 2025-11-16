@@ -118,12 +118,12 @@ class Bidirectional_Dijkstra:
                 continue
             if find_info == None :
                 if now_node == target:
-                    return (now_node, back_track_path(now_node))
+                    return (now_path, back_track_path(now_node))
             else :
                 if (persona := get_info(now_node)) != None :
                     if (search_info := persona.get(find_info)) != None :
                         if target in search_info:
-                            return (now_node, back_track_path(now_node))
+                            return (now_path, back_track_path(now_node))
             # min_path[now_node] = now_path # no needed
             for nei_node, nei_w in self.adj_matrix[now_node].items() :
                 if (new_path := now_path + nei_w) < min_path[nei_node] :
