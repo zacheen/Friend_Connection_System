@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, render_template_string
 from flask_cors import CORS
 from Backend import Backend
-from persona_data import PERSONAS, get_persona
+from persona_data import get_all_personas, get_persona
 import os
 import atexit
 
@@ -192,6 +192,7 @@ HTML_TEMPLATE = '''
         let personaPreviewElements = {};
         let currentPersonaId = null;
         let personaCache = {};
+        let personaCacheLoading = null;
         let personaTooltipElements = {};
         let tooltipHideTimeout = null;
         const defaultPathMessage = `
@@ -248,12 +249,44 @@ HTML_TEMPLATE = '''
             }
         }
 
+        async function preloadPersonas() {
+            if (personaCacheLoading) {
+                return personaCacheLoading;
+            }
+
+            personaCacheLoading = (async () => {
+                const response = await fetch('/api/personas');
+                const data = await response.json();
+                if (!response.ok || !data.success || !data.personas) {
+                    throw new Error(data.message || 'Unable to load personas');
+                }
+                personaCache = data.personas || {};
+                return personaCache;
+            })();
+
+            try {
+                return await personaCacheLoading;
+            } catch (error) {
+                console.warn('Persona preload failed:', error);
+                personaCacheLoading = null;
+                throw error;
+            }
+        }
+
         async function getPersonaData(name) {
             if (!name) {
                 throw new Error('Invalid name');
             }
             if (personaCache[name]) {
                 return personaCache[name];
+            }
+            try {
+                const personas = await preloadPersonas();
+                if (personas[name]) {
+                    return personas[name];
+                }
+            } catch (error) {
+                // If preload fails, fall back to single fetch below.
             }
             const response = await fetch(`/api/persona/${encodeURIComponent(name)}`);
             const data = await response.json();
@@ -1179,6 +1212,22 @@ def profile_page(person_id):
         persona=persona,
         person_id=person_id
     )
+
+
+@app.route('/api/personas')
+def personas_api():
+    """Return the full persona dataset backed by the JSON file."""
+    personas = get_all_personas() or {}
+    if not personas:
+        return jsonify({
+            'success': False,
+            'message': 'No persona data available'
+        }), 404
+    return jsonify({
+        'success': True,
+        'count': len(personas),
+        'personas': personas
+    })
 
 
 @app.route('/api/persona/<person_id>')
